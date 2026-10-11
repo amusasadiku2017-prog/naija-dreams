@@ -1,0 +1,409 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Naija Dreams</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#d9efc8;color:#244331}
+button,input,select{font:inherit}
+button{border:0;border-radius:12px;padding:12px 16px;font-weight:bold;cursor:pointer}
+.topbar{background:#123f2d;color:white;padding:16px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.brand{color:#ffdc69;font-size:clamp(19px,5vw,28px);font-weight:900}
+.money{font-weight:bold;white-space:nowrap}
+#world{display:block;width:100%;height:auto;background:#80bd70;touch-action:none}
+.controls{background:#123f2d;color:white;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.pad{display:grid;grid-template-columns:repeat(3,55px);grid-template-rows:repeat(2,48px);gap:5px}
+.pad button{background:#356b50;color:white;border:2px solid #9abca5;padding:3px;font-size:22px;touch-action:none}
+.up{grid-column:2;grid-row:1}.left{grid-column:1;grid-row:2}.down{grid-column:2;grid-row:2}.right{grid-column:3;grid-row:2}
+#action{background:#ffdc69;color:#243b2d}
+.hint{font-size:13px;line-height:1.5}
+.overlay{display:none;position:fixed;inset:0;z-index:20;overflow-y:auto;padding:20px 12px;background:#fff3d8;color:#244331;text-align:center}
+.panel{width:min(100%,440px);margin:10px auto;background:#fffdf6;padding:18px;border:3px solid #e6c48c;border-radius:18px}
+.overlay h1{font-size:clamp(24px,6vw,32px)}
+.field{display:block;text-align:left;margin:12px 0;font-weight:bold}
+.field input,.field select{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #b7c7b4;border-radius:9px;background:white}
+.primary{background:#25834a;color:white;margin:4px}
+.secondary{background:#ffdc69;color:#243b2d;margin:4px}
+.shop-item{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;text-align:left;background:white;border:2px solid #e2c58f;border-radius:12px;padding:12px;margin:12px 0}
+#shopMessage,#saveMessage,#interiorMessage{min-height:24px;font-weight:bold}
+#inventory{background:#f0f5e9;padding:10px;border-radius:10px}
+#interiorRoom{margin:18px auto;padding:28px 10px;min-height:140px;background:#e8c89a;border:8px solid #a66e43;border-radius:12px;font-size:36px}
+.small{font-size:13px}
+#toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);z-index:50;background:#123f2d;color:white;padding:12px 16px;border-radius:12px;max-width:90%;display:none;text-align:center}
+@media(max-width:420px){.controls{justify-content:center}.shop-item{justify-content:center;text-align:center}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">🌴 NAIJA DREAMS</div>
+  <div class="money">💵 ₦<span id="moneyDisplay">5,000</span></div>
+</header>
+
+<canvas id="world" width="720" height="520"></canvas>
+
+<section class="controls">
+  <div class="pad">
+    <button class="up" data-key="up">▲</button>
+    <button class="left" data-key="left">◀</button>
+    <button class="down" data-key="down">▼</button>
+    <button class="right" data-key="right">▶</button>
+  </div>
+  <div class="hint">WALK AROUND<br>Discover the city</div>
+  <button id="action">Explore</button>
+</section>
+<p style="text-align:center;font-size:13px">Walk close to a building and tap Explore.</p>
+
+<div id="creator" class="overlay" style="display:block">
+  <div class="panel">
+    <h1>🌟 Create Your Character</h1>
+    <p>Welcome to Naija Dreams! Create your own character.</p>
+    <label class="field">Character name
+      <input id="heroName" maxlength="18" value="Amara">
+    </label>
+    <label class="field">Skin tone
+      <select id="skinChoice">
+        <option value="#bd8058">Warm brown</option>
+        <option value="#75462f">Deep brown</option>
+        <option value="#e0ad83">Light brown</option>
+        <option value="#9b6042">Rich brown</option>
+      </select>
+    </label>
+    <label class="field">Hair style
+      <select id="hairChoice">
+        <option value="short">Short</option>
+        <option value="afro">Afro</option>
+        <option value="braids">Braids</option>
+      </select>
+    </label>
+    <label class="field">Outfit
+      <select id="outfitChoice">
+        <option value="#f5eadb">Cream</option>
+        <option value="#e53935">Red</option>
+        <option value="#2196f3">Blue</option>
+        <option value="#4caf50">Green</option>
+        <option value="#9c27b0">Purple</option>
+        <option value="#ffb300">Yellow</option>
+      </select>
+    </label>
+    <button class="primary" id="playGame">Play Game ▶</button>
+    <button class="secondary" id="loadFromCreator">Load Saved Game</button>
+  </div>
+</div>
+
+<div id="shop" class="overlay">
+  <div class="panel">
+    <h1>🛒 Mama Tee's Mini Mart</h1>
+    <p>Welcome! What would you like to buy?</p>
+    <h2>💰 Money: ₦<span id="shopMoney">5,000</span></h2>
+    <div class="shop-item"><span>🍪 Snacks — ₦500</span><button class="primary" onclick="buyItem('snacks',500)">Buy Snacks</button></div>
+    <div class="shop-item"><span>👕 Clothes — ₦2,000</span><button class="primary" onclick="buyItem('clothes',2000)">Buy Clothes</button></div>
+    <h3>🎒 Your Items</h3>
+    <p id="inventory">You haven't bought anything yet.</p>
+    <p id="shopMessage">Choose an item to get started!</p>
+    <button class="secondary" id="saveInShop">💾 Save Game</button>
+    <button class="secondary" id="loadInShop">📂 Load Game</button>
+    <p id="saveMessage"></p>
+    <button class="secondary" id="closeShop">🚶 Return to City</button>
+  </div>
+</div>
+
+<div id="interior" class="overlay">
+  <div class="panel">
+    <h1 id="placeTitle">🏠 Welcome!</h1>
+    <div id="interiorRoom">🛋️ 🪴 🪟</div>
+    <p id="placeDescription">Explore your new place.</p>
+    <button class="secondary" id="saveInInterior">💾 Save Game</button>
+    <button class="secondary" id="loadInInterior">📂 Load Game</button>
+    <p id="interiorMessage"></p>
+    <button class="primary" id="leavePlace">🚶 Return to City</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(() => {
+const canvas=document.getElementById('world');
+const ctx=canvas.getContext('2d');
+const keys={up:false,down:false,left:false,right:false};
+const hero={name:'Amara',skin:'#bd8058',hair:'short',outfit:'#f5eadb'};
+const player={x:360,y:260,speed:190};
+let gameMoney=5000;
+const inventory={};
+let lastTime=0;
+let toastTimer;
+
+const buildings=[
+{id:'shop',x:28,y:35,w:150,h:95,name:"Mama Tee's Mini Mart",icon:'🛒',color:'#e5a64e',roof:'#b94a3c',desc:'Buy snacks and clothes here.',room:'🥫 🍪 🧃 👕'},
+{id:'home',x:30,y:365,w:150,h:105,name:'Your Home',icon:'🏠',color:'#f0cf7d',roof:'#b94a3c',desc:'Welcome home! Rest and plan your next adventure.',room:'🛋️ 🪴 🪟 🛏️'},
+{id:'school',x:285,y:365,w:150,h:105,name:'Naija Dreams School',icon:'🏫',color:'#f4df9a',roof:'#367e52',desc:'Your school adventure starts here!',room:'📚 🪑 ✏️ 🎒'},
+{id:'clinic',x:535,y:365,w:150,h:105,name:'Community Clinic',icon:'🏥',color:'#f7eee2',roof:'#cf5555',desc:'Welcome to the community clinic.',room:'🩺 🪑 🩹'},
+{id:'bank',x:535,y:35,w:150,h:95,name:'City Bank',icon:'🏦',color:'#e6d2a5',roof:'#347c57',desc:'Welcome to the bank. More activities coming soon!',room:'💳 💵 🏦'}
+];
+
+const npcs=[
+{x:245,y:200,shirt:'#e9b949',skin:'#986044',hair:'short'},
+{x:480,y:280,shirt:'#5a8fd6',skin:'#7e4c32',hair:'afro'},
+{x:230,y:430,shirt:'#d66d91',skin:'#a86d49',hair:'braids'}
+];
+
+function say(message){
+const toast=document.getElementById('toast');
+toast.textContent=message;
+toast.style.display='block';
+clearTimeout(toastTimer);
+toastTimer=setTimeout(()=>toast.style.display='none',2300);
+}
+
+function roundRect(x,y,w,h,r,color){
+ctx.fillStyle=color;
+ctx.beginPath();
+ctx.roundRect(x,y,w,h,r);
+ctx.fill();
+}
+
+function drawBuilding(b){
+roundRect(b.x,b.y,b.w,b.h,10,b.color);
+ctx.fillStyle=b.roof;
+ctx.beginPath();
+ctx.moveTo(b.x-7,b.y+8);
+ctx.lineTo(b.x+b.w/2,b.y-17);
+ctx.lineTo(b.x+b.w+7,b.y+8);
+ctx.closePath();
+ctx.fill();
+ctx.fillStyle='#fff8e8';
+ctx.fillRect(b.x+12,b.y+25,28,24);
+ctx.fillStyle='#76b9d5';
+ctx.fillRect(b.x+15,b.y+28,22,18);
+ctx.fillStyle='#70452d';
+ctx.fillRect(b.x+b.w/2-12,b.y+b.h-35,24,35);
+ctx.fillStyle='#243b2d';
+ctx.font='bold 12px Arial';
+ctx.textAlign='center';
+ctx.fillText(b.name,b.x+b.w/2,b.y+b.h+15,b.w+20);
+ctx.font='26px Arial';
+ctx.fillText(b.icon,b.x+b.w-27,b.y+30);
+}
+
+function drawTree(x,y){
+ctx.fillStyle='#755137';
+ctx.fillRect(x-5,y,10,25);
+ctx.fillStyle='#267b48';
+ctx.beginPath();
+ctx.arc(x,y-5,21,0,Math.PI*2);
+ctx.fill();
+ctx.fillStyle='#439953';
+ctx.beginPath();
+ctx.arc(x-10,y-12,12,0,Math.PI*2);
+ctx.fill();
+}
+
+function drawPerson(x,y,options={}){
+const skin=options.skin||'#a86d49';
+const shirt=options.shirt||'#4a83d6';
+const hair=options.hair||'short';
+ctx.fillStyle='#00000025';
+ctx.beginPath();
+ctx.ellipse(x,y+10,12,5,0,0,Math.PI*2);
+ctx.fill();
+ctx.fillStyle='#56392e';
+ctx.fillRect(x-7,y-2,5,15);
+ctx.fillRect(x+2,y-2,5,15);
+roundRect(x-11,y-25,22,25,5,shirt);
+ctx.fillStyle=skin;
+ctx.fillRect(x-15,y-22,5,17);
+ctx.fillRect(x+10,y-22,5,17);
+ctx.beginPath();
+ctx.ellipse(x,y-34,10,11,0,0,Math.PI*2);
+ctx.fillStyle=skin;
+ctx.fill();
+ctx.fillStyle='#30251e';
+if(hair==='afro'){
+ctx.beginPath();ctx.ellipse(x,y-42,14,12,0,0,Math.PI*2);ctx.fill();
+}else if(hair==='braids'){
+ctx.beginPath();ctx.ellipse(x,y-42,10,7,0,0,Math.PI*2);ctx.fill();
+ctx.fillRect(x-11,y-43,4,22);
+ctx.fillRect(x+7,y-43,4,22);
+}else{
+ctx.beginPath();ctx.ellipse(x,y-42,10,6,0,0,Math.PI*2);ctx.fill();
+ctx.fillRect(x-10,y-42,4,12);
+}
+}
+
+function draw(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.fillStyle='#80bd70';
+ctx.fillRect(0,0,720,520);
+ctx.fillStyle='#d9c39b';
+ctx.fillRect(0,225,720,90);
+ctx.fillRect(190,0,55,520);
+ctx.fillRect(455,0,55,520);
+ctx.fillStyle='#f7e6a9';
+ctx.fillRect(0,265,720,4);
+ctx.fillRect(215,0,4,520);
+ctx.fillRect(480,0,4,520);
+for(let x=15;x<720;x+=65){ctx.fillStyle='#fff1c2';ctx.fillRect(x,268,32,4);}
+drawTree(205,160);drawTree(500,180);drawTree(260,335);drawTree(520,335);
+buildings.forEach(drawBuilding);
+roundRect(285,45,160,75,8,'#b77b43');
+ctx.fillStyle='#d94f3d';ctx.fillRect(278,40,174,18);
+ctx.fillStyle='#fff0bd';ctx.fillRect(292,70,146,42);
+ctx.font='bold 13px Arial';ctx.textAlign='center';ctx.fillStyle='#5a3928';ctx.fillText('MARKET STALL',365,95);
+npcs.forEach(n=>drawPerson(n.x,n.y,n));
+drawPerson(player.x,player.y,{skin:hero.skin,shirt:hero.outfit,hair:hero.hair});
+ctx.textAlign='center';ctx.font='bold 13px Arial';ctx.fillStyle='#fff36e';
+ctx.fillText(hero.name,player.x,player.y-56);
+}
+
+function updateMoney(){
+document.getElementById('moneyDisplay').textContent=gameMoney.toLocaleString('en-NG');
+document.getElementById('shopMoney').textContent=gameMoney.toLocaleString('en-NG');
+}
+
+function updateInventory(){
+const rows=Object.entries(inventory).filter(([,qty])=>qty>0).map(([name,qty])=>(name==='snacks'?'🍪 Snacks':'👕 Clothes')+' × '+qty);
+document.getElementById('inventory').textContent=rows.length?rows.join(', '):"You haven't bought anything yet.";
+}
+function updateShop(){updateMoney();updateInventory();}
+
+window.buyItem=function(name,price){
+if(gameMoney<price){document.getElementById('shopMessage').textContent='Not enough money!';return;}
+gameMoney-=price;
+inventory[name]=(inventory[name]||0)+1;
+updateShop();
+document.getElementById('shopMessage').textContent='Purchase successful! You bought '+name+'.';
+};
+
+function openInterior(b){
+if(b.id==='shop'){
+document.getElementById('shopMessage').textContent='Choose an item to get started!';
+updateShop();
+document.getElementById('shop').style.display='block';
+return;
+}
+document.getElementById('placeTitle').textContent=b.icon+' '+b.name;
+document.getElementById('placeDescription').textContent=b.desc;
+document.getElementById('interiorRoom').textContent=b.room;
+document.getElementById('interiorMessage').textContent='';
+document.getElementById('interior').style.display='block';
+}
+
+function nearestBuilding(){
+let nearest=null,best=Infinity;
+for(const b of buildings){
+const cx=b.x+b.w/2,cy=b.y+b.h/2;
+const d=Math.hypot(player.x-cx,player.y-cy);
+if(d<best){best=d;nearest=b;}
+}
+return best<125?nearest:null;
+}
+
+document.getElementById('action').addEventListener('click',()=>{
+if(document.getElementById('shop').style.display==='block'||document.getElementById('interior').style.display==='block')return;
+const b=nearestBuilding();
+if(!b){say('Walk closer to a building, then tap Explore!');return;}
+openInterior(b);
+});
+
+function closeOverlays(){
+document.getElementById('shop').style.display='none';
+document.getElementById('interior').style.display='none';
+say('Welcome back to the city!');
+}
+document.getElementById('closeShop').addEventListener('click',closeOverlays);
+document.getElementById('leavePlace').addEventListener('click',closeOverlays);
+
+function saveGame(){
+const data={money:gameMoney,inventory,hero,playerX:player.x,playerY:player.y};
+try{
+localStorage.setItem('naijaDreamsSave',JSON.stringify(data));
+document.getElementById('saveMessage').textContent='✅ Game saved successfully!';
+document.getElementById('interiorMessage').textContent='✅ Game saved successfully!';
+say('Game saved successfully!');
+}catch(e){say('Could not save. Check browser settings.');}
+}
+
+function loadGame(){
+try{
+const raw=localStorage.getItem('naijaDreamsSave');
+if(!raw){say('No saved game found yet.');return;}
+const d=JSON.parse(raw);
+if(typeof d.money!=='number'||!d.inventory||!d.hero||typeof d.playerX!=='number'||typeof d.playerY!=='number')throw new Error('Invalid save');
+gameMoney=d.money;
+Object.keys(inventory).forEach(k=>delete inventory[k]);
+Object.entries(d.inventory).forEach(([k,v])=>{if(k==='snacks'||k==='clothes')inventory[k]=Math.max(0,Number(v)||0);});
+hero.name=String(d.hero.name||'Amara').slice(0,18);
+hero.skin=d.hero.skin||'#bd8058';
+hero.hair=['short','afro','braids'].includes(d.hero.hair)?d.hero.hair:'short';
+hero.outfit=d.hero.outfit||'#f5eadb';
+player.x=Math.max(15,Math.min(705,d.playerX));
+player.y=Math.max(25,Math.min(495,d.playerY));
+updateShop();draw();
+document.getElementById('saveMessage').textContent='✅ Saved game loaded!';
+document.getElementById('interiorMessage').textContent='✅ Saved game loaded!';
+say('Saved game loaded!');
+}catch(e){say('Could not load the saved game.');}
+}
+document.getElementById('saveInShop').addEventListener('click',saveGame);
+document.getElementById('loadInShop').addEventListener('click',loadGame);
+document.getElementById('saveInInterior').addEventListener('click',saveGame);
+document.getElementById('loadInInterior').addEventListener('click',loadGame);
+document.getElementById('loadFromCreator').addEventListener('click',()=>{
+loadGame();
+if(localStorage.getItem('naijaDreamsSave'))document.getElementById('creator').style.display='none';
+});
+
+document.getElementById('playGame').addEventListener('click',()=>{
+hero.name=document.getElementById('heroName').value.trim()||'Amara';
+hero.skin=document.getElementById('skinChoice').value;
+hero.hair=document.getElementById('hairChoice').value;
+hero.outfit=document.getElementById('outfitChoice').value;
+document.getElementById('creator').style.display='none';
+say('Welcome to Naija Dreams, '+hero.name+'!');
+draw();
+});
+
+function setKey(key,value){keys[key]=value;}
+document.querySelectorAll('[data-key]').forEach(button=>{
+const key=button.dataset.key;
+button.addEventListener('pointerdown',e=>{e.preventDefault();setKey(key,true);});
+['pointerup','pointercancel','pointerleave'].forEach(evt=>button.addEventListener(evt,e=>{e.preventDefault();setKey(key,false);}));
+button.addEventListener('contextmenu',e=>e.preventDefault());
+});
+window.addEventListener('keydown',e=>{
+const map={ArrowUp:'up',w:'up',ArrowDown:'down',s:'down',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right'};
+if(map[e.key]){keys[map[e.key]]=true;e.preventDefault();}
+});
+window.addEventListener('keyup',e=>{
+const map={ArrowUp:'up',w:'up',ArrowDown:'down',s:'down',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right'};
+if(map[e.key])keys[map[e.key]]=false;
+});
+window.addEventListener('blur',()=>Object.keys(keys).forEach(k=>keys[k]=false));
+
+function loop(now){
+const dt=Math.min((now-lastTime)/1000||0,0.04);
+lastTime=now;
+const dx=(keys.right?1:0)-(keys.left?1:0);
+const dy=(keys.down?1:0)-(keys.up?1:0);
+if(dx||dy){
+const len=Math.hypot(dx,dy);
+player.x+=dx/len*player.speed*dt;
+player.y+=dy/len*player.speed*dt;
+}
+player.x=Math.max(15,Math.min(705,player.x));
+player.y=Math.max(25,Math.min(495,player.y));
+draw();
+requestAnimationFrame(loop);
+}
+updateShop();
+draw();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+  </html>
+    
